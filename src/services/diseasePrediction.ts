@@ -433,6 +433,44 @@ function generatePreventivePlan(
   };
 }
 
+// Helper function to save prediction to localStorage
+function savePredictionToLocalStorage(prediction: PredictionResponse): void {
+  try {
+    const key = `predictions_${prediction.userId}`;
+    const existing = localStorage.getItem(key);
+    let predictions: PredictionResponse[] = existing ? JSON.parse(existing) : [];
+    
+    // Add new prediction at the beginning (most recent first)
+    predictions = [prediction, ...predictions.filter(p => p.predictionId !== prediction.predictionId)];
+    
+    // Keep only last 50 predictions to avoid storage issues
+    predictions = predictions.slice(0, 50);
+    
+    localStorage.setItem(key, JSON.stringify(predictions));
+    console.log('Prediction saved to localStorage');
+  } catch (error) {
+    console.error('Failed to save prediction to localStorage:', error);
+  }
+}
+
+// Helper function to get predictions from localStorage
+function getPredictionsFromLocalStorage(userId: string): PredictionResponse[] {
+  try {
+    const key = `predictions_${userId}`;
+    const data = localStorage.getItem(key);
+    if (!data) return [];
+    
+    const predictions: PredictionResponse[] = JSON.parse(data);
+    // Sort by timestamp descending (most recent first)
+    return predictions.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  } catch (error) {
+    console.error('Failed to load predictions from localStorage:', error);
+    return [];
+  }
+}
+
 // Client-side prediction function (fallback)
 function clientSidePredict(indicators: HealthIndicators): {
   risks: DiseaseRisk[];
@@ -504,6 +542,10 @@ export async function predictDiseaseRisk(
 
     const result = await response.json();
     console.log('Prediction success:', result);
+    
+    // Store prediction in localStorage for persistence
+    savePredictionToLocalStorage(result);
+    
     return result;
   } catch (error: any) {
     // Catch all network errors, timeouts, CORS errors, etc.
@@ -524,7 +566,7 @@ export async function predictDiseaseRisk(
       const { risks, overallRiskScore, alertLevel } = clientSidePredict(indicators);
       const preventivePlan = generatePreventivePlan(risks, alertLevel);
       
-      return {
+      const fallbackResult = {
         userId,
         predictionId: `local_${Date.now()}_${Math.random().toString(36).slice(2)}`,
         timestamp: new Date().toISOString(),
@@ -533,6 +575,11 @@ export async function predictDiseaseRisk(
         alertLevel,
         preventivePlan,
       };
+      
+      // Store prediction in localStorage for persistence
+      savePredictionToLocalStorage(fallbackResult);
+      
+      return fallbackResult;
     }
     console.error('Prediction error:', error);
     throw error;
@@ -551,20 +598,39 @@ export async function getPredictionHistory(userId: string): Promise<PredictionRe
     
     if (!response.ok) {
       if (response.status >= 500 || response.status === 0) {
-        console.warn('Backend unavailable for history, returning empty array');
-        return [];
+        console.warn('Backend unavailable for history, using localStorage');
+        // Fallback to localStorage
+        return getPredictionsFromLocalStorage(userId);
       }
       throw new Error(`Failed to fetch history: ${response.status}`);
     }
-    return await response.json();
+    
+    const apiHistory = await response.json();
+    
+    // Merge with localStorage data (localStorage takes priority for duplicates)
+    const localHistory = getPredictionsFromLocalStorage(userId);
+    const merged = [...apiHistory];
+    
+    // Add local predictions that aren't in API results
+    localHistory.forEach(localPred => {
+      if (!merged.find(p => p.predictionId === localPred.predictionId)) {
+        merged.push(localPred);
+      }
+    });
+    
+    // Sort by timestamp descending
+    return merged.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
   } catch (error: any) {
-    // Silently fail for network errors, return empty array
+    // Silently fail for network errors, use localStorage
     if (error instanceof TypeError || error?.name === 'AbortError' || error?.message?.includes('fetch')) {
-      console.warn('Backend unavailable for history, returning empty array');
-      return [];
+      console.warn('Backend unavailable for history, using localStorage');
+      return getPredictionsFromLocalStorage(userId);
     }
     console.error('History fetch error:', error);
-    return [];
+    // Fallback to localStorage on any error
+    return getPredictionsFromLocalStorage(userId);
   }
 }
 
@@ -612,19 +678,57 @@ export async function getRiskTrends(userId: string, disease: string): Promise<{
     
     if (!response.ok) {
       if (response.status >= 500 || response.status === 0) {
-        console.warn('Backend unavailable for trends, returning empty data');
-        return { dates: [], scores: [] };
+        console.warn('Backend unavailable for trends, using localStorage');
+        // Fallback to localStorage
+        return getTrendsFromLocalStorage(userId, disease);
       }
       throw new Error(`Failed to fetch trends: ${response.status}`);
     }
-    return await response.json();
+    
+    const apiTrends = await response.json();
+    
+    // If API returns empty, try localStorage
+    if (apiTrends.dates.length === 0) {
+      const localTrends = getTrendsFromLocalStorage(userId, disease);
+      if (localTrends.dates.length > 0) {
+        return localTrends;
+      }
+    }
+    
+    return apiTrends;
   } catch (error: any) {
-    // Silently fail for network errors, return empty data
+    // Silently fail for network errors, use localStorage
     if (error instanceof TypeError || error?.name === 'AbortError' || error?.message?.includes('fetch')) {
-      console.warn('Backend unavailable for trends, returning empty data');
-      return { dates: [], scores: [] };
+      console.warn('Backend unavailable for trends, using localStorage');
+      return getTrendsFromLocalStorage(userId, disease);
     }
     console.error('Trends fetch error:', error);
+    // Fallback to localStorage on any error
+    return getTrendsFromLocalStorage(userId, disease);
+  }
+}
+
+// Helper function to get trends from localStorage
+function getTrendsFromLocalStorage(userId: string, disease: string): {
+  dates: string[];
+  scores: number[];
+} {
+  try {
+    const predictions = getPredictionsFromLocalStorage(userId);
+    const dates: string[] = [];
+    const scores: number[] = [];
+    
+    predictions.forEach(pred => {
+      const diseaseRisk = pred.risks.find(r => r.disease === disease);
+      if (diseaseRisk) {
+        dates.push(pred.timestamp);
+        scores.push(diseaseRisk.riskScore);
+      }
+    });
+    
+    return { dates, scores };
+  } catch (error) {
+    console.error('Failed to get trends from localStorage:', error);
     return { dates: [], scores: [] };
   }
 }
