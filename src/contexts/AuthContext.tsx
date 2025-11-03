@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { API_BASE } from '../services/config';
 
-type User = { id: string; email: string } | null;
+type User = { id: string; email: string; name?: string } | null;
 
 type AuthContextType = {
   user: User;
   token: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, name?: string) => Promise<boolean>;
+  signup: (email: string, password: string, name?: string) => Promise<boolean>;
   loginWithGoogle: (token: string, user: User) => Promise<void>;
   logout: () => void;
 };
@@ -33,12 +33,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('auth_user', JSON.stringify(u));
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, name?: string) => {
     try {
       const r = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, name })
       });
       if (!r.ok) throw new Error('backend login failed');
       const data = await r.json();
@@ -46,25 +46,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch {
       // Fallback: mock local auth (no backend)
-      const mockUser = { id: `mock_${Date.now()}`, email } as const;
+      const mockUser = { id: `mock_${Date.now()}`, email, name: name || email.split('@')[0] } as const;
       persist('mock_token', mockUser as any);
       return true;
     }
   };
 
-  const signup = async (email: string, password: string) => {
+  const signup = async (email: string, password: string, name?: string) => {
     try {
       const r = await fetch(`${API_BASE}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, name })
       });
       if (!r.ok) throw new Error('backend signup failed');
       const data = await r.json();
       persist(data.token, data.user);
       return true;
     } catch {
-      const mockUser = { id: `mock_${Date.now()}`, email } as const;
+      const mockUser = { id: `mock_${Date.now()}`, email, name: name || email.split('@')[0] } as const;
       persist('mock_token', mockUser as any);
       return true;
     }

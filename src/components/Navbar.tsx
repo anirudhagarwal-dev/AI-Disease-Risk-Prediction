@@ -187,10 +187,12 @@ const Navbar = () => {
                     setIsServicesOpen(false);
                   }}
                   className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+                  title={user?.email || 'User menu'}
                 >
-                  <User className="h-4 w-4" />
-                  <span className="max-w-[160px] truncate">{user?.email}</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <User className="h-5 w-5" />
+                  <span className="text-sm font-medium">
+                    {(user as any)?.name || user?.email?.split('@')[0] || 'User'}
+                  </span>
                 </button>
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50">
