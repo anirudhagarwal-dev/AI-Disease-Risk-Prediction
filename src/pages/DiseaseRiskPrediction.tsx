@@ -67,8 +67,12 @@ const DiseaseRiskPrediction = () => {
       loadHistory();
     } catch (error: any) {
       console.error('Prediction error details:', error);
+      // Only show alert for non-network errors (the fallback should handle network errors)
       const errorMessage = error?.message || 'Failed to generate prediction';
-      alert(`Error: ${errorMessage}\n\nPlease ensure:\n1. Backend server is running on port 4000\n2. You have internet connectivity\n3. All required fields are filled`);
+      // Don't show alert for network errors as fallback should handle them
+      if (!errorMessage.includes('fetch') && !errorMessage.includes('network') && !errorMessage.includes('Backend unavailable')) {
+        alert(`Error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
