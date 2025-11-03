@@ -1,31 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Heart, Cross, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Calendar } from 'lucide-react';
+import { Activity, Heart, Cross, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Calendar, RefreshCw } from 'lucide-react';
 import { getPredictionHistory, getRiskTrends, type PredictionResponse, type DiseaseRisk } from '../services/diseasePrediction';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const PatientDashboard = () => {
   const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
   const [history, setHistory] = useState<PredictionResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedDisease, setSelectedDisease] = useState<'diabetes' | 'heart_failure' | 'cancer' | null>(null);
   const [trendData, setTrendData] = useState<{ dates: string[]; scores: number[] }>({ dates: [], scores: [] });
 
-  const loadHistory = async () => {
+  const loadHistory = async (isRefresh = false) => {
     if (!user?.id) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
+      console.log('Loading prediction history for user:', user.id);
       const hist = await getPredictionHistory(user.id);
+      console.log('Loaded history:', hist);
       setHistory(hist || []);
     } catch (error) {
       console.error('Failed to load history', error);
       setHistory([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -42,6 +51,39 @@ const PatientDashboard = () => {
 
     return () => clearTimeout(timer);
   }, [user?.id, isAuthenticated]);
+
+  // Refresh when navigating to dashboard
+  useEffect(() => {
+    if (location.pathname === '/patient-dashboard' && user?.id) {
+      console.log('Navigated to dashboard, refreshing history...');
+      loadHistory(true);
+    }
+  }, [location.pathname, user?.id]);
+
+  // Refresh history when component becomes visible (e.g., navigating back to dashboard)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.id) {
+        console.log('Dashboard visible, refreshing history...');
+        loadHistory();
+      }
+    };
+
+    const handleFocus = () => {
+      if (user?.id) {
+        console.log('Window focused, refreshing history...');
+        loadHistory();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (user?.id && selectedDisease) {
@@ -153,13 +195,26 @@ const PatientDashboard = () => {
           <p className="text-xl text-gray-600 mb-6">
             Track your disease risk predictions and monitor your health over time
           </p>
-          <Link
-            to="/disease-risk-prediction"
-            className="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            <Activity className="h-5 w-5 mr-2" />
-            New Risk Assessment
-          </Link>
+          <div className="flex gap-4">
+            <Link
+              to="/disease-risk-prediction"
+              className="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              <Activity className="h-5 w-5 mr-2" />
+              New Risk Assessment
+            </Link>
+            <button
+              onClick={() => {
+                console.log('Manual refresh triggered');
+                loadHistory(true);
+              }}
+              disabled={refreshing}
+              className="inline-flex items-center bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
         </motion.div>
 
         {latestPrediction ? (

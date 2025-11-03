@@ -436,37 +436,78 @@ function generatePreventivePlan(
 // Helper function to save prediction to localStorage
 function savePredictionToLocalStorage(prediction: PredictionResponse): void {
   try {
+    if (!prediction || !prediction.userId) {
+      console.error('Invalid prediction data:', prediction);
+      return;
+    }
+    
     const key = `predictions_${prediction.userId}`;
+    console.log('Saving prediction to localStorage with key:', key, 'Prediction:', prediction);
+    
     const existing = localStorage.getItem(key);
     let predictions: PredictionResponse[] = existing ? JSON.parse(existing) : [];
     
+    // Remove duplicate if exists
+    predictions = predictions.filter(p => p.predictionId !== prediction.predictionId);
+    
     // Add new prediction at the beginning (most recent first)
-    predictions = [prediction, ...predictions.filter(p => p.predictionId !== prediction.predictionId)];
+    predictions = [prediction, ...predictions];
     
     // Keep only last 50 predictions to avoid storage issues
     predictions = predictions.slice(0, 50);
     
     localStorage.setItem(key, JSON.stringify(predictions));
-    console.log('Prediction saved to localStorage');
+    console.log('✅ Prediction saved to localStorage successfully. Total predictions:', predictions.length);
+    
+    // Verify it was saved
+    const verify = localStorage.getItem(key);
+    if (verify) {
+      const saved = JSON.parse(verify);
+      console.log('✅ Verification: Saved', saved.length, 'predictions');
+    } else {
+      console.error('❌ Verification failed: No data found in localStorage');
+    }
   } catch (error) {
-    console.error('Failed to save prediction to localStorage:', error);
+    console.error('❌ Failed to save prediction to localStorage:', error);
+    // Try to show more details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
   }
 }
 
 // Helper function to get predictions from localStorage
 function getPredictionsFromLocalStorage(userId: string): PredictionResponse[] {
   try {
+    if (!userId) {
+      console.warn('No userId provided to getPredictionsFromLocalStorage');
+      return [];
+    }
+    
     const key = `predictions_${userId}`;
+    console.log('Loading predictions from localStorage with key:', key);
+    
     const data = localStorage.getItem(key);
-    if (!data) return [];
+    if (!data) {
+      console.log('No predictions found in localStorage for key:', key);
+      return [];
+    }
     
     const predictions: PredictionResponse[] = JSON.parse(data);
+    console.log('✅ Loaded', predictions.length, 'predictions from localStorage');
+    
     // Sort by timestamp descending (most recent first)
-    return predictions.sort((a, b) => 
+    const sorted = predictions.sort((a, b) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
+    
+    return sorted;
   } catch (error) {
-    console.error('Failed to load predictions from localStorage:', error);
+    console.error('❌ Failed to load predictions from localStorage:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+    }
     return [];
   }
 }
