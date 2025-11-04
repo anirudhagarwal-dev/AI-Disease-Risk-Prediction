@@ -120,9 +120,10 @@ const Navbar = () => {
                 <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                   {servicesItems.map((item) => {
                     const Icon = item.icon;
+                    const translatedText = getTranslation(language, item.name);
                     return (
                       <Link
-                        key={item.name}
+                        key={`${item.name}-${language}`}
                         to={item.href}
                         onClick={() => setIsServicesOpen(false)}
                         className={`flex items-center space-x-3 px-4 py-2.5 text-sm transition-colors ${
@@ -132,7 +133,7 @@ const Navbar = () => {
                         }`}
                       >
                         <Icon className="h-4 w-4" />
-                        <span>{getTranslation(language, item.name)}</span>
+                        <span key={`${item.name}-text-${language}`}>{translatedText}</span>
                       </Link>
                     );
                   })}
@@ -260,13 +261,14 @@ const Navbar = () => {
             <div className="px-3 py-2 border-t border-gray-200 mt-2 pt-3">
               <div className="flex items-center space-x-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 <Grid className="h-4 w-4" />
-                <span>{getTranslation(language, 'nav.services')}</span>
+                <span key={`nav.services-text-${language}`}>{getTranslation(language, 'nav.services')}</span>
               </div>
               {servicesItems.map((item) => {
                 const Icon = item.icon;
+                const translatedText = getTranslation(language, item.name);
                 return (
                   <Link
-                    key={item.name}
+                    key={`${item.name}-${language}`}
                     to={item.href}
                     onClick={() => setIsMenuOpen(false)}
                     className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors mb-1 ${
@@ -276,7 +278,7 @@ const Navbar = () => {
                     }`}
                   >
                     <Icon className="h-5 w-5" />
-                    <span>{getTranslation(language, item.name)}</span>
+                    <span key={`${item.name}-text-${language}`}>{translatedText}</span>
                   </Link>
                 );
               })}
