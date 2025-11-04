@@ -67,7 +67,7 @@ const Navbar = () => {
   const isServicesActive = servicesItems.some(item => location.pathname === item.href);
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
+    <nav className="bg-white shadow-lg sticky top-0 z-50" key={language}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center min-h-16 py-2">
           {/* Logo */}
@@ -83,9 +83,10 @@ const Navbar = () => {
             {/* First navigation items with icons */}
             {mainNavigationFirst.map((item) => {
               const Icon = item.icon;
+              const translatedText = getTranslation(language, item.name);
               return (
                 <Link
-                  key={item.name}
+                  key={`${item.name}-${language}`}
                   to={item.href}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
                     isActive(item.href)
@@ -94,7 +95,7 @@ const Navbar = () => {
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{getTranslation(language, item.name)}</span>
+                  <span key={`${item.name}-text-${language}`}>{translatedText}</span>
                 </Link>
               );
             })}
@@ -142,9 +143,10 @@ const Navbar = () => {
             {/* Last navigation items with icons */}
             {mainNavigationLast.map((item) => {
               const Icon = item.icon;
+              const translatedText = getTranslation(language, item.name);
               return (
                 <Link
-                  key={item.name}
+                  key={`${item.name}-${language}`}
                   to={item.href}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
                     isActive(item.href)
@@ -153,7 +155,7 @@ const Navbar = () => {
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{getTranslation(language, item.name)}</span>
+                  <span key={`${item.name}-text-${language}`}>{translatedText}</span>
                 </Link>
               );
             })}
