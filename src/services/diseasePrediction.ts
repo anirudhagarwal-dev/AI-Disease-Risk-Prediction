@@ -675,6 +675,35 @@ export async function getPredictionHistory(userId: string): Promise<PredictionRe
   }
 }
 
+// Helper function to get all predictions from localStorage across all users
+function getAllPredictionsFromLocalStorage(): PredictionResponse[] {
+  try {
+    const allPredictions: PredictionResponse[] = [];
+    
+    // Iterate through all localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('predictions_')) {
+        try {
+          const data = localStorage.getItem(key);
+          if (data) {
+            const predictions: PredictionResponse[] = JSON.parse(data);
+            allPredictions.push(...predictions);
+          }
+        } catch (error) {
+          console.warn(`Failed to parse predictions for key ${key}:`, error);
+        }
+      }
+    }
+    
+    console.log('✅ Loaded', allPredictions.length, 'total predictions from localStorage across all users');
+    return allPredictions;
+  } catch (error) {
+    console.error('❌ Failed to get all predictions from localStorage:', error);
+    return [];
+  }
+}
+
 export async function getHighRiskPatients(): Promise<PredictionResponse[]> {
   try {
     const controller = new AbortController();
@@ -687,20 +716,71 @@ export async function getHighRiskPatients(): Promise<PredictionResponse[]> {
     
     if (!response.ok) {
       if (response.status >= 500 || response.status === 0) {
-        console.warn('Backend unavailable for high-risk patients, returning empty array');
-        return [];
+        console.warn('Backend unavailable for high-risk patients, using localStorage');
+        // Fallback to localStorage - get all predictions and filter for high-risk
+        const allPredictions = getAllPredictionsFromLocalStorage();
+        const highRisk = allPredictions.filter(p => 
+          p.alertLevel === 'critical' || p.alertLevel === 'high'
+        );
+        // Sort by timestamp descending and limit to 50
+        const sorted = highRisk.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        ).slice(0, 50);
+        console.log('✅ Found', sorted.length, 'high-risk patients from localStorage');
+        return sorted;
       }
       throw new Error(`Failed to fetch high-risk patients: ${response.status}`);
     }
-    return await response.json();
+    
+    const apiPatients = await response.json();
+    
+    // Merge with localStorage data
+    const allLocalPredictions = getAllPredictionsFromLocalStorage();
+    const localHighRisk = allLocalPredictions.filter(p => 
+      p.alertLevel === 'critical' || p.alertLevel === 'high'
+    );
+    
+    // Combine API and localStorage results, removing duplicates
+    const combined = [...apiPatients];
+    localHighRisk.forEach(localPred => {
+      if (!combined.find(p => p.predictionId === localPred.predictionId)) {
+        combined.push(localPred);
+      }
+    });
+    
+    // Sort by timestamp descending and limit to 50
+    const sorted = combined.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    ).slice(0, 50);
+    
+    console.log('✅ Found', sorted.length, 'high-risk patients (combined API + localStorage)');
+    return sorted;
   } catch (error: any) {
-    // Silently fail for network errors, return empty array
+    // Silently fail for network errors, use localStorage
     if (error instanceof TypeError || error?.name === 'AbortError' || error?.message?.includes('fetch')) {
-      console.warn('Backend unavailable for high-risk patients, returning empty array');
-      return [];
+      console.warn('Backend unavailable for high-risk patients, using localStorage');
+      // Fallback to localStorage - get all predictions and filter for high-risk
+      const allPredictions = getAllPredictionsFromLocalStorage();
+      const highRisk = allPredictions.filter(p => 
+        p.alertLevel === 'critical' || p.alertLevel === 'high'
+      );
+      // Sort by timestamp descending and limit to 50
+      const sorted = highRisk.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      ).slice(0, 50);
+      console.log('✅ Found', sorted.length, 'high-risk patients from localStorage');
+      return sorted;
     }
     console.error('High-risk fetch error:', error);
-    return [];
+    // Fallback to localStorage on any error
+    const allPredictions = getAllPredictionsFromLocalStorage();
+    const highRisk = allPredictions.filter(p => 
+      p.alertLevel === 'critical' || p.alertLevel === 'high'
+    );
+    const sorted = highRisk.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    ).slice(0, 50);
+    return sorted;
   }
 }
 
