@@ -688,6 +688,13 @@ function getAllPredictionsFromLocalStorage(): PredictionResponse[] {
           const data = localStorage.getItem(key);
           if (data) {
             const predictions: PredictionResponse[] = JSON.parse(data);
+            console.log(`Found ${predictions.length} predictions in ${key}:`, predictions.map(p => ({
+              predictionId: p.predictionId,
+              userId: p.userId,
+              alertLevel: p.alertLevel,
+              overallRiskScore: p.overallRiskScore,
+              maxRisk: Math.max(...p.risks.map(r => r.riskScore))
+            })));
             allPredictions.push(...predictions);
           }
         } catch (error) {
@@ -697,6 +704,12 @@ function getAllPredictionsFromLocalStorage(): PredictionResponse[] {
     }
     
     console.log('✅ Loaded', allPredictions.length, 'total predictions from localStorage across all users');
+    console.log('Alert levels breakdown:', {
+      critical: allPredictions.filter(p => p.alertLevel === 'critical').length,
+      high: allPredictions.filter(p => p.alertLevel === 'high').length,
+      medium: allPredictions.filter(p => p.alertLevel === 'medium').length,
+      none: allPredictions.filter(p => p.alertLevel === 'none').length,
+    });
     return allPredictions;
   } catch (error) {
     console.error('❌ Failed to get all predictions from localStorage:', error);
@@ -719,9 +732,31 @@ export async function getHighRiskPatients(): Promise<PredictionResponse[]> {
         console.warn('Backend unavailable for high-risk patients, using localStorage');
         // Fallback to localStorage - get all predictions and filter for high-risk
         const allPredictions = getAllPredictionsFromLocalStorage();
-        const highRisk = allPredictions.filter(p => 
-          p.alertLevel === 'critical' || p.alertLevel === 'high'
-        );
+        console.log('Filtering for high-risk patients. Total predictions:', allPredictions.length);
+        console.log('Checking all patients:', allPredictions.map(p => ({
+          userId: p.userId,
+          alertLevel: p.alertLevel,
+          overallRiskScore: p.overallRiskScore,
+          maxRisk: Math.max(...p.risks.map(r => r.riskScore))
+        })));
+        
+        const highRisk = allPredictions.filter(p => {
+          // Include patients with critical or high alertLevel
+          // OR patients with overallRiskScore >= 50 (high risk threshold)
+          // OR patients with any individual disease risk >= 50
+          const maxRisk = Math.max(...p.risks.map(r => r.riskScore));
+          const isHighRisk = p.alertLevel === 'critical' || 
+                           p.alertLevel === 'high' || 
+                           p.overallRiskScore >= 50 ||
+                           maxRisk >= 50;
+          if (!isHighRisk) {
+            console.log(`Skipping patient ${p.userId}: alertLevel=${p.alertLevel}, overallRiskScore=${p.overallRiskScore}, maxRisk=${maxRisk}`);
+          } else {
+            console.log(`✅ Including patient ${p.userId}: alertLevel=${p.alertLevel}, overallRiskScore=${p.overallRiskScore}, maxRisk=${maxRisk}`);
+          }
+          return isHighRisk;
+        });
+        console.log('Filtered high-risk patients:', highRisk.length, 'out of', allPredictions.length);
         // Sort by timestamp descending and limit to 50
         const sorted = highRisk.sort((a, b) => 
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -737,7 +772,9 @@ export async function getHighRiskPatients(): Promise<PredictionResponse[]> {
     // Merge with localStorage data
     const allLocalPredictions = getAllPredictionsFromLocalStorage();
     const localHighRisk = allLocalPredictions.filter(p => 
-      p.alertLevel === 'critical' || p.alertLevel === 'high'
+      p.alertLevel === 'critical' || 
+      p.alertLevel === 'high' || 
+      p.overallRiskScore >= 50
     );
     
     // Combine API and localStorage results, removing duplicates
@@ -761,9 +798,13 @@ export async function getHighRiskPatients(): Promise<PredictionResponse[]> {
       console.warn('Backend unavailable for high-risk patients, using localStorage');
       // Fallback to localStorage - get all predictions and filter for high-risk
       const allPredictions = getAllPredictionsFromLocalStorage();
-      const highRisk = allPredictions.filter(p => 
-        p.alertLevel === 'critical' || p.alertLevel === 'high'
-      );
+      const highRisk = allPredictions.filter(p => {
+        const maxRisk = Math.max(...p.risks.map(r => r.riskScore));
+        return p.alertLevel === 'critical' || 
+               p.alertLevel === 'high' || 
+               p.overallRiskScore >= 50 ||
+               maxRisk >= 50;
+      });
       // Sort by timestamp descending and limit to 50
       const sorted = highRisk.sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()

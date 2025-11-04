@@ -17,10 +17,13 @@ const ClinicianAlerts = () => {
 
   const loadHighRiskPatients = async () => {
     try {
+      console.log('Loading high-risk patients...');
       const patients = await getHighRiskPatients();
+      console.log('Received high-risk patients:', patients.length, patients);
       setHighRiskPatients(patients);
     } catch (error) {
       console.error('Failed to load high-risk patients', error);
+      setHighRiskPatients([]);
     } finally {
       setLoading(false);
     }
