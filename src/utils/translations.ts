@@ -4,6 +4,9 @@ export const translations: Record<Language, Record<string, string>> = {
   en: {
     // Navigation
     'nav.home': 'Home',
+    'nav.diseaseRisk': 'Disease Risk Prediction',
+    'nav.patientDashboard': 'Patient Dashboard',
+    'nav.clinicianAlerts': 'Clinician Alerts',
     'nav.chatbots': 'AI Chatbots',
     'nav.findDoctors': 'Find Doctors',
     'nav.vaccination': 'Vaccination',
@@ -561,6 +564,9 @@ export const translations: Record<Language, Record<string, string>> = {
   hi: {
     // Navigation
     'nav.home': 'होम',
+    'nav.diseaseRisk': 'बीमारी जोखिम भविष्यवाणी',
+    'nav.patientDashboard': 'रोगी डैशबोर्ड',
+    'nav.clinicianAlerts': 'चिकित्सक अलर्ट',
     'nav.chatbots': 'एआई चैटबॉट्स',
     'nav.findDoctors': 'डॉक्टर खोजें',
     'nav.vaccination': 'टीकाकरण',
@@ -3346,6 +3352,9 @@ export const translations: Record<Language, Record<string, string>> = {
   kn: {
     // Navigation
     'nav.home': 'ಮುಖಪುಟ',
+    'nav.diseaseRisk': 'ರೋಗ ಅಪಾಯ ಭವಿಷ್ಯ',
+    'nav.patientDashboard': 'ರೋಗಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+    'nav.clinicianAlerts': 'ವೈದ್ಯರ ಎಚ್ಚರಿಕೆಗಳು',
     'nav.chatbots': 'AI ಚಾಟ್‌ಬಾಟ್‌ಗಳು',
     'nav.findDoctors': 'ವೈದ್ಯರನ್ನು ಹುಡುಕಿ',
     'nav.vaccination': 'ತಡೆಪಡೆಯುವಿಕೆ',

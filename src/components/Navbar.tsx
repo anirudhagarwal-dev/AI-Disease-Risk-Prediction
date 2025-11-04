@@ -34,9 +34,9 @@ const Navbar = () => {
 
   // Main navigation items (always visible) - with icons
   const mainNavigationFirst = [
-    { name: 'Disease Risk Prediction', href: '/disease-risk-prediction', icon: AlertTriangle },
-    { name: 'Patient Dashboard', href: '/patient-dashboard', icon: LayoutDashboard },
-    { name: 'Clinician Alerts', href: '/clinician-alerts', icon: Bell },
+    { name: 'nav.diseaseRisk', href: '/disease-risk-prediction', icon: AlertTriangle },
+    { name: 'nav.patientDashboard', href: '/patient-dashboard', icon: LayoutDashboard },
+    { name: 'nav.clinicianAlerts', href: '/clinician-alerts', icon: Bell },
   ];
 
   const mainNavigationLast = [
@@ -200,8 +200,8 @@ const Navbar = () => {
                       <div className="text-sm font-semibold">{getTranslation(language, 'common.signedIn')}</div>
                       <div className="text-sm text-gray-600 break-all">{user?.email}</div>
                     </div>
-                    <Link to="/patient-dashboard" onClick={() => setIsUserMenuOpen(false)} className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-sm mb-1">Dashboard</Link>
-                    <Link to="/disease-risk-prediction" onClick={() => setIsUserMenuOpen(false)} className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-sm mb-1">Risk Assessment</Link>
+                    <Link to="/patient-dashboard" onClick={() => setIsUserMenuOpen(false)} className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-sm mb-1">{getTranslation(language, 'nav.patientDashboard')}</Link>
+                    <Link to="/disease-risk-prediction" onClick={() => setIsUserMenuOpen(false)} className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-sm mb-1">{getTranslation(language, 'nav.diseaseRisk')}</Link>
                     <button onClick={logout} className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-sm">{getTranslation(language, 'common.logout')}</button>
                   </div>
                 )}
